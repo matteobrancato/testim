@@ -480,10 +480,10 @@ for idx, user in enumerate(sorted(filtered["Display Name"].unique())):
             merge_count = len(user_df[(user_df["Action"] == "pull-request.closed") & (user_df["pr_status"] == "merged")])
             total_tests = user_df["tests_added"].sum() + user_df["tests_changed"].sum()
 
-            st.metric("PRs Submitted", submitted_count, key=f"metric_sub_{idx}")
-            st.metric("Reviews Given", review_count, key=f"metric_rev_{idx}")
-            st.metric("PRs Merged", merge_count, key=f"metric_mrg_{idx}")
-            st.metric("Tests Touched", int(total_tests), key=f"metric_tst_{idx}")
+            st.markdown(f"**PRs Submitted:** {submitted_count}")
+            st.markdown(f"**Reviews Given:** {review_count}")
+            st.markdown(f"**PRs Merged:** {merge_count}")
+            st.markdown(f"**Tests Touched:** {int(total_tests)}")
 
         # PR activity log table
         table_df = user_df[["Time", "Action Label", "pr_title", "pr_status", "tests_added", "tests_changed"]].copy()
