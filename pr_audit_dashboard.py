@@ -153,8 +153,12 @@ def extract_pr_info(extra: dict) -> dict:
 
 @st.cache_data
 def load_data(uploaded_file) -> pd.DataFrame:
-    """Load and process the CSV file."""
-    df = pd.read_csv(uploaded_file)
+    """Load and process the CSV or Excel file."""
+    name = uploaded_file.name.lower()
+    if name.endswith((".xlsx", ".xls")):
+        df = pd.read_excel(uploaded_file, usecols=range(5))
+    else:
+        df = pd.read_csv(uploaded_file)
     df["Time"] = pd.to_datetime(df["Time"], utc=True)
     df["Date"] = df["Time"].dt.date
     df["Hour"] = df["Time"].dt.hour
@@ -171,12 +175,12 @@ def load_data(uploaded_file) -> pd.DataFrame:
 
 # ─── Header ─────────────────────────────────────────────────────────────────────
 st.markdown("# 🔍 Testim PR Audit Dashboard")
-st.markdown("Upload the Testim audit log CSV to visualize pull request activity across the team.")
+st.markdown("Upload the Testim audit log (CSV or Excel) to visualize pull request activity across the team.")
 
-uploaded_file = st.file_uploader("Drop your Testim audit CSV here", type=["csv"], label_visibility="collapsed")
+uploaded_file = st.file_uploader("Drop your Testim audit file here", type=["csv", "xlsx", "xls"], label_visibility="collapsed")
 
 if uploaded_file is None:
-    st.info("👆 Upload a Testim audit log CSV file to get started.")
+    st.info("👆 Upload a Testim audit log file (CSV or Excel) to get started.")
     st.stop()
 
 df = load_data(uploaded_file)
@@ -417,7 +421,7 @@ st.plotly_chart(fig_scatter, use_container_width=True)
 # ─── Row 5: Individual Detail Cards ─────────────────────────────────────────────
 st.markdown('<p class="section-title">Individual Breakdown</p>', unsafe_allow_html=True)
 
-for user in sorted(filtered["Display Name"].unique()):
+for idx, user in enumerate(sorted(filtered["Display Name"].unique())):
     user_df = filtered[filtered["Display Name"] == user].sort_values("Time", ascending=False)
     email = user_df["User Email"].iloc[0]
     total = len(user_df)
@@ -467,7 +471,7 @@ for user in sorted(filtered["Display Name"].unique()):
                 plot_bgcolor="rgba(0,0,0,0)",
             )
             fig_user.update_yaxes(gridcolor="rgba(0,0,0,0.06)", dtick=1)
-            st.plotly_chart(fig_user, use_container_width=True)
+            st.plotly_chart(fig_user, use_container_width=True, key=f"chart_user_{idx}")
 
         with detail_right:
             # PR summary stats
@@ -476,16 +480,16 @@ for user in sorted(filtered["Display Name"].unique()):
             merge_count = len(user_df[(user_df["Action"] == "pull-request.closed") & (user_df["pr_status"] == "merged")])
             total_tests = user_df["tests_added"].sum() + user_df["tests_changed"].sum()
 
-            st.metric("PRs Submitted", submitted_count)
-            st.metric("Reviews Given", review_count)
-            st.metric("PRs Merged", merge_count)
-            st.metric("Tests Touched", int(total_tests))
+            st.metric("PRs Submitted", submitted_count, key=f"metric_sub_{idx}")
+            st.metric("Reviews Given", review_count, key=f"metric_rev_{idx}")
+            st.metric("PRs Merged", merge_count, key=f"metric_mrg_{idx}")
+            st.metric("Tests Touched", int(total_tests), key=f"metric_tst_{idx}")
 
         # PR activity log table
         table_df = user_df[["Time", "Action Label", "pr_title", "pr_status", "tests_added", "tests_changed"]].copy()
         table_df.columns = ["Timestamp", "Action", "PR Title", "Status", "Tests Added", "Tests Changed"]
         table_df["Timestamp"] = table_df["Timestamp"].dt.strftime("%Y-%m-%d %H:%M")
-        st.dataframe(table_df, use_container_width=True, hide_index=True)
+        st.dataframe(table_df, use_container_width=True, hide_index=True, key=f"table_user_{idx}")
 
 
 # ─── Row 6: PR Titles Summary ───────────────────────────────────────────────────
